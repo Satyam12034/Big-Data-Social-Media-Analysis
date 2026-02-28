@@ -3,98 +3,145 @@ import pandas as pd
 import numpy as np
 import pickle
 import re
+import os
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import plotly.express as px
 
-# PAGE CONFIG
-st.set_page_config(page_title="Big Data Social Media Trends", layout="wide")
+# --- PAGE CONFIGURATION ---
+st.set_page_config(
+    page_title="Big Data Social Media Analysis",
+    page_icon="📊",
+    layout="wide"
+)
 
-# CUSTOM CSS
+# --- CUSTOM CSS FOR PROFESSIONAL LOOK ---
 st.markdown("""
     <style>
-    .main { background-color: #f5f7f9; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
+    .main { background-color: #f8f9fa; }
+    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0px 2px 10px rgba(0,0,0,0.05); }
+    .prediction-box { padding: 20px; border-radius: 10px; text-align: center; color: white; font-weight: bold; font-size: 24px; }
     </style>
     """, unsafe_allow_html=True)
 
-# LOAD ASSETS
+# --- ASSET LOADING WITH ERROR HANDLING ---
 @st.cache_resource
 def load_assets():
-    model = load_model('sentiment_model.h5')
-    with open('tokenizer.pickle', 'rb') as handle:
-        tokenizer = pickle.load(handle)
-    with open('label_encoder.pickle', 'rb') as handle:
-        le = pickle.load(handle)
-    df = pd.read_csv('test.csv')
-    return model, tokenizer, le, df
+    assets = {}
+    try:
+        # Load the Model
+        assets['model'] = load_model('sentiment_model.h5')
+        
+        # Load Tokenizer
+        with open('tokenizer.pickle', 'rb') as handle:
+            assets['tokenizer'] = pickle.load(handle)
+            
+        # Load Label Encoder
+        with open('label_encoder.pickle', 'rb') as handle:
+            assets['le'] = pickle.load(handle)
+            
+        # Robust Data Loading (Handling Encoding & Path issues)
+        file_path = 'test.csv'
+        if os.path.exists(file_path):
+            try:
+                assets['df'] = pd.read_csv(file_path, encoding='utf-8')
+            except UnicodeDecodeError:
+                assets['df'] = pd.read_csv(file_path, encoding='ISO-8859-1')
+        else:
+            assets['df'] = None
+            
+        return assets, None
+    except Exception as e:
+        return None, str(e)
 
-model, tokenizer, le, raw_df = load_assets()
+# Initialize assets
+data_assets, error_msg = load_assets()
 
-# SIDEBAR
-st.sidebar.title("Project Controls")
-st.sidebar.info("This project analyzes Big Data from Social Media to identify global trends and sentiments.")
+# --- SIDEBAR NAVIGATION ---
+st.sidebar.title("🛠️ Project Controls")
+st.sidebar.markdown("---")
+app_mode = st.sidebar.selectbox("Choose a Page", ["Home & Predictor", "Big Data Insights"])
 
-# MAIN TITLE
-st.title("📊 Big Data Analysis: Social Media Trends")
-st.markdown("---")
+if error_msg:
+    st.error(f"⚠️ **Initialization Error:** {error_msg}")
+    st.info("Ensure `sentiment_model.h5`, `tokenizer.pickle`, and `test.csv` are in the root directory.")
+    st.stop()
 
-# TABS FOR NAVIGATION
-tab1, tab2 = st.tabs(["🔍 Sentiment Predictor", "📈 Trend Dashboard"])
-
-with tab1:
-    st.header("Real-time Sentiment Prediction")
-    user_tweet = st.text_area("Enter a social media post/tweet below:", "I am feeling so excited about the new technology trends!")
+# --- PAGE 1: PREDICTOR ---
+if app_mode == "Home & Predictor":
+    st.title("📊 Big Data Analysis of Social Media Trends")
+    st.write("This application uses a Deep Learning model trained from scratch to analyze sentiment and visualize global social media behavior.")
     
+    st.markdown("### 🔍 Real-time Sentiment Predictor")
+    user_input = st.text_area("What's on your mind? (Enter a tweet or post)", 
+                              placeholder="Type something like 'I love the new updates!'", 
+                              height=100)
+
     if st.button("Analyze Sentiment"):
-        # Preprocessing (Simplified)
-        clean_text = user_tweet.lower()
-        clean_text = re.sub(r'[^\w\s]', '', clean_text)
-        
-        # Vectorize
-        seq = tokenizer.texts_to_sequences([clean_text])
-        padded = pad_sequences(seq, maxlen=50) # Matching Training config
-        
-        # Predict
-        pred = model.predict(padded)
-        labels = le.classes_
-        result = labels[np.argmax(pred)]
-        confidence = np.max(pred) * 100
-        
-        # Display Output
-        col1, col2 = st.columns(2)
-        with col1:
-            if result == 'positive':
-                st.success(f"Detected Sentiment: **{result.upper()}**")
-            elif result == 'negative':
-                st.error(f"Detected Sentiment: **{result.upper()}**")
-            else:
-                st.warning(f"Detected Sentiment: **{result.upper()}**")
-        
-        with col2:
-            st.metric("Confidence Score", f"{confidence:.2f}%")
+        if user_input:
+            # Pre-processing (must match training)
+            clean_text = user_input.lower()
+            clean_text = re.sub(r'[^\w\s]', '', clean_text)
+            
+            # Prediction Logic
+            seq = data_assets['tokenizer'].texts_to_sequences([clean_text])
+            padded = pad_sequences(seq, maxlen=50) # Matching Training MAX_SEQUENCE_LENGTH
+            
+            prediction = data_assets['model'].predict(padded)
+            class_idx = np.argmax(prediction)
+            label = data_assets['le'].classes_[class_idx]
+            confidence = np.max(prediction) * 100
 
-with tab2:
-    st.header("Global Social Media Trends")
+            # Professional Result Display
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                bg_color = "#28a745" if label == 'positive' else "#dc3545" if label == 'negative' else "#ffc107"
+                st.markdown(f"""<div class='prediction-box' style='background-color: {bg_color};'>
+                            Detected Sentiment: {label.upper()}</div>""", unsafe_allow_html=True)
+            
+            with col2:
+                st.metric("Model Confidence", f"{confidence:.1f}%")
+        else:
+            st.warning("Please enter some text first!")
+
+# --- PAGE 2: BIG DATA INSIGHTS ---
+else:
+    st.title("📈 Global Trend Dashboard")
     
-    # Trend 1: Sentiment by Age
-    st.subheader("1. Sentiment Distribution by Age Group")
-    fig_age = px.histogram(raw_df, x="Age of User", color="sentiment", barmode="group", 
-                           color_discrete_sequence=px.colors.qualitative.Pastel)
-    st.plotly_chart(fig_age, use_container_width=True)
-    
-    # Trend 2: Time of Day Analysis
-    st.subheader("2. Impact of Time on User Sentiment")
-    fig_time = px.pie(raw_df, names='Time of Tweet', values='Population -2020', 
-                      title="Tweet Volume by Time of Day", hole=0.4)
-    st.plotly_chart(fig_time, use_container_width=True)
+    if data_assets['df'] is not None:
+        df = data_assets['df']
+        
+        # Row 1: Key Metrics
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Total Records Analyzed", len(df))
+        m2.metric("Unique Countries", df['Country'].nunique())
+        m3.metric("Top Sentiment", df['sentiment'].mode()[0].capitalize())
+        
+        st.markdown("---")
+        
+        # Row 2: Charts
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            st.subheader("Sentiment Distribution")
+            fig1 = px.pie(df, names='sentiment', hole=0.4, color='sentiment',
+                          color_discrete_map={'positive':'#28a745', 'negative':'#dc3545', 'neutral':'#ffc107'})
+            st.plotly_chart(fig1, use_container_width=True)
+            
+        with c2:
+            st.subheader("Activity by Time of Day")
+            fig2 = px.histogram(df, x="Time of Tweet", color="sentiment", barmode="group")
+            st.plotly_chart(fig2, use_container_width=True)
+            
+        # Row 3: Demographics
+        st.subheader("Sentiment Trends by Age Group")
+        fig3 = px.bar(df, x="Age of User", y="Population -2020", color="sentiment", 
+                      title="User Reach vs Demographic Sentiment")
+        st.plotly_chart(fig3, use_container_width=True)
+        
+    else:
+        st.error("Data file 'test.csv' not found. Dashboard cannot be generated.")
 
-    # Trend 3: Country Map
-    st.subheader("3. Geographic Trend Map")
-    fig_map = px.choropleth(raw_df, locations="Country", locationmode='country names',
-                            color="sentiment", hover_name="Country",
-                            title="Primary Sentiment by Country")
-    st.plotly_chart(fig_map, use_container_width=True)
-
+# --- FOOTER ---
 st.markdown("---")
-st.caption("College Project: Big Data Analysis Framework | Built with TensorFlow & Streamlit")
+st.caption("College Project | Big Data Sentiment Engine | Build version 2.0.1")

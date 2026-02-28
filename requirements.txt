@@ -2,7 +2,9 @@ streamlit
 pandas
 numpy
 tensorflow-cpu
-scikit-learn
+beautifulsoup4
+lxml
 plotly
-matplotlib
-seaborn
+scikit-learn
+nltk
+requests

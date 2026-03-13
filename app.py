@@ -98,18 +98,30 @@ elif domain == "Mental Health Analysis":
     st.title("🧠 Post-COVID Mental Health Conversations")
     url = "https://news.google.com/rss/search?q=Mental+Health+Awareness+Reddit+Twitter"
     
-    if st.button("Monitor Wellness Trends"):
+if st.button("Monitor Wellness Trends"):
         df = run_analysis(scrape_rss(url))
-        # Yahan change kiya: color styling add kar di
         st.table(df.style.applymap(color_sent, subset=['Sentiment']))
         
-        # Wellness Gauge
-        pos_score = (len(df[df['Sentiment']=='positive']) / len(df)) * 100
+        # IMPROVED MATH: (Positive + 0.5 * Neutral) / Total
+        pos_count = len(df[df['Sentiment']=='positive'])
+        neu_count = len(df[df['Sentiment']=='neutral'])
+        total = len(df)
+        
+        wellness_index = ((pos_count + (0.5 * neu_count)) / total) * 100
+        
         fig = go.Figure(go.Indicator(
             mode = "gauge+number",
-            value = pos_score,
+            value = wellness_index,
             title = {'text': "Community Wellness Index (%)"},
-            gauge = {'axis': {'range': [0, 100]}, 'bar': {'color': "darkblue"}}
+            gauge = {
+                'axis': {'range': [0, 100]},
+                'bar': {'color': "darkblue"},
+                'steps': [
+                    {'range': [0, 40], 'color': "#ffcccb"}, # Red zone
+                    {'range': [40, 70], 'color': "#fff9c4"}, # Yellow zone
+                    {'range': [70, 100], 'color': "#c8e6c9"} # Green zone
+                ]
+            }
         ))
         st.plotly_chart(fig)
 

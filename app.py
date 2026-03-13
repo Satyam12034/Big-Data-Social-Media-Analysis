@@ -48,7 +48,7 @@ def run_analysis(titles):
 # --- SIDEBAR ---
 st.sidebar.title("🏆 Intelligence Hub")
 domain = st.sidebar.selectbox("Select Domain", 
-    ["All Sports News (Default)", "Global & India Pulse", "Bollywood Buzz", "Mental Health Analysis"])
+    ["All Sports News", "Global & India Pulse", "Bollywood Buzz", "Mental Health Analysis"])
 
 # --- DOMAIN LOGIC ---
 if domain == "All Sports News":

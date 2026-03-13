@@ -116,7 +116,7 @@ elif domain == "Mental Health Analysis":
             value = wellness_index,
             title = {'text': "Community Wellness Index (%)"},
             gauge = {
-                'axis': {'range': [1, 100]},
+                'axis': {'range': [0, 100]},
                 'bar': {'color': "darkblue"},
                 'steps': [
                     {'range': [0, 40], 'color': "#ffcccb"}, # Critical (Red)

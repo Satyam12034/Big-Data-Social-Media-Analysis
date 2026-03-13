@@ -20,6 +20,11 @@ def load_engine():
 
 model, tk, le = load_engine()
 
+# --- UTILS (Yeh Function har section use karega) ---
+def color_sent(v):
+    c = '#28a745' if v == 'positive' else '#dc3545' if v == 'negative' else '#ffc107'
+    return f'background-color: {c}; color: white; font-weight: bold'
+
 # --- SCRAPER ---
 def scrape_rss(url):
     try:
@@ -58,9 +63,6 @@ if domain == "All Sports News (Default)":
         
         # 1. TABLE ON TOP
         st.subheader("Live Sports Feed")
-        def color_sent(v):
-            c = '#28a745' if v == 'positive' else '#dc3545' if v == 'negative' else '#ffc107'
-            return f'background-color: {c}; color: white; font-weight: bold'
         st.table(df.style.applymap(color_sent, subset=['Sentiment']))
 
         # 2. GRAPHS BELOW
@@ -78,7 +80,8 @@ elif domain == "Global & India Pulse":
     
     if st.button("Run Analysis"):
         df = run_analysis(scrape_rss(url))
-        st.table(df)
+        # Yahan change kiya: color styling add kar di
+        st.table(df.style.applymap(color_sent, subset=['Sentiment']))
         st.plotly_chart(px.sunburst(df, path=['Sentiment', 'Headline'], values='Confidence', title="Headline Impact Mapping"))
 
 elif domain == "Bollywood Buzz":
@@ -87,7 +90,8 @@ elif domain == "Bollywood Buzz":
     
     if st.button("Analyze Movie Buzz"):
         df = run_analysis(scrape_rss(url))
-        st.table(df)
+        # Yahan change kiya: color styling add kar di
+        st.table(df.style.applymap(color_sent, subset=['Sentiment']))
         st.plotly_chart(px.area(df, x="Headline", y="Confidence", color="Sentiment", title="Buzz Velocity"))
 
 elif domain == "Mental Health Analysis":
@@ -96,7 +100,8 @@ elif domain == "Mental Health Analysis":
     
     if st.button("Monitor Wellness Trends"):
         df = run_analysis(scrape_rss(url))
-        st.table(df)
+        # Yahan change kiya: color styling add kar di
+        st.table(df.style.applymap(color_sent, subset=['Sentiment']))
         
         # Wellness Gauge
         pos_score = (len(df[df['Sentiment']=='positive']) / len(df)) * 100

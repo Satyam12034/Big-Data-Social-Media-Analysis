@@ -9,10 +9,11 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # --- APP CONFIG ---
-st.set_page_config(page_title="Sentira AI: Multi-Sport & Trend Intelligence", layout="wide")
+st.set_page_config(page_title="Sentira AI: Intelligence Dashboard", layout="wide")
 
 @st.cache_resource
 def load_engine():
+    # Ensure these files are in your project folder
     m = load_model('sentiment_model.h5')
     with open('tokenizer.pickle', 'rb') as h: tk = pickle.load(h)
     with open('label_encoder.pickle', 'rb') as h: le = pickle.load(h)
@@ -20,21 +21,22 @@ def load_engine():
 
 model, tk, le = load_engine()
 
-# --- UTILS (Yeh Function har section use karega) ---
+# --- UTILS ---
 def color_sent(v):
+    """Applies colors to the Sentiment column in tables"""
     c = '#28a745' if v == 'positive' else '#dc3545' if v == 'negative' else '#ffc107'
     return f'background-color: {c}; color: white; font-weight: bold'
 
-# --- SCRAPER ---
 def scrape_rss(url):
+    """Scrapes top 10 headlines from Google News RSS"""
     try:
         r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
         soup = BeautifulSoup(r.content, features="xml")
         return [item.title.text for item in soup.findAll('item')[:10]]
     except: return []
 
-# --- ANALYSIS ENGINE ---
 def run_analysis(titles):
+    """Processes headlines through the Sentiment Model"""
     results = []
     for t in titles:
         clean = re.sub(r'[^a-zA-Z\s]', '', t.lower())
@@ -48,24 +50,21 @@ def run_analysis(titles):
 # --- SIDEBAR ---
 st.sidebar.title("🏆 Intelligence Hub")
 domain = st.sidebar.selectbox("Select Domain", 
-    ["All Sports News", "Global & India Pulse", "Bollywood Buzz", "Mental Health Analysis"])
+    ["Sports News", "Global & India Pulse", "Bollywood Buzz", "Mental Health Analysis"])
 
 # --- DOMAIN LOGIC ---
-if domain == "All Sports News":
+
+# 1. SPORTS SECTION
+if domain == "Sports News":
     st.title("🏆 World Sports Intelligence")
     st.write("Live tracking of Football, Cricket, Tennis, F1, and more.")
-    
-    # RSS for Global Sports
     sport_url = "https://news.google.com/rss/headlines/section/topic/SPORTS"
     
     if st.button("Fetch Live Sports Trends"):
         df = run_analysis(scrape_rss(sport_url))
-        
-        # 1. TABLE ON TOP
         st.subheader("Live Sports Feed")
         st.table(df.style.applymap(color_sent, subset=['Sentiment']))
 
-        # 2. GRAPHS BELOW
         st.markdown("---")
         col1, col2 = st.columns(2)
         with col1:
@@ -73,6 +72,7 @@ if domain == "All Sports News":
         with col2:
             st.plotly_chart(px.bar(df, x="Sentiment", y="Confidence", color="Sentiment", title="Analysis Confidence"), use_container_width=True)
 
+# 2. GLOBAL & INDIA SECTION
 elif domain == "Global & India Pulse":
     st.title("🌐 Global vs. India News")
     region = st.radio("Choose Region", ["India", "Global"], horizontal=True)
@@ -80,32 +80,34 @@ elif domain == "Global & India Pulse":
     
     if st.button("Run Analysis"):
         df = run_analysis(scrape_rss(url))
-        # Yahan change kiya: color styling add kar di
         st.table(df.style.applymap(color_sent, subset=['Sentiment']))
         st.plotly_chart(px.sunburst(df, path=['Sentiment', 'Headline'], values='Confidence', title="Headline Impact Mapping"))
 
+# 3. BOLLYWOOD SECTION
 elif domain == "Bollywood Buzz":
     st.title("🎬 Bollywood Box Office & Social Buzz")
     url = "https://news.google.com/rss/search?q=Bollywood+Movie+Review+Box+Office"
     
     if st.button("Analyze Movie Buzz"):
         df = run_analysis(scrape_rss(url))
-        # Yahan change kiya: color styling add kar di
         st.table(df.style.applymap(color_sent, subset=['Sentiment']))
         st.plotly_chart(px.area(df, x="Headline", y="Confidence", color="Sentiment", title="Buzz Velocity"))
 
+# 4. MENTAL HEALTH SECTION
 elif domain == "Mental Health Analysis":
     st.title("🧠 Mental Health Conversations")
+    st.write("Monitoring wellness trends and emotional triggers through social data.")
     url = "https://news.google.com/rss/search?q=Mental+Health+Awareness+Reddit+Twitter"
     
-if st.button("Monitor Wellness Trends"):
+    if st.button("Monitor Wellness Trends"):
         df = run_analysis(scrape_rss(url))
         st.table(df.style.applymap(color_sent, subset=['Sentiment']))
         
-        # IMPROVED MATH: (Positive + 0.5 * Neutral) / Total
+        # PROPER OUTPUT LOGIC: Weighted Score
+        # Neutral headlines are counted as 50% positive for the Wellness Index
         pos_count = len(df[df['Sentiment']=='positive'])
         neu_count = len(df[df['Sentiment']=='neutral'])
-        total = len(df)
+        total = len(df) if len(df) > 0 else 1
         
         wellness_index = ((pos_count + (0.5 * neu_count)) / total) * 100
         
@@ -117,13 +119,13 @@ if st.button("Monitor Wellness Trends"):
                 'axis': {'range': [0, 100]},
                 'bar': {'color': "darkblue"},
                 'steps': [
-                    {'range': [0, 40], 'color': "#ffcccb"}, # Red zone
-                    {'range': [40, 70], 'color': "#fff9c4"}, # Yellow zone
-                    {'range': [70, 100], 'color': "#c8e6c9"} # Green zone
+                    {'range': [0, 40], 'color': "#ffcccb"}, # Critical (Red)
+                    {'range': [40, 75], 'color': "#fff9c4"}, # Stable (Yellow)
+                    {'range': [75, 100], 'color': "#c8e6c9"} # Healthy (Green)
                 ]
             }
         ))
         st.plotly_chart(fig)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("Big Data Social Engine v4.1")
+st.sidebar.caption("Big Data Social Engine v4.2")

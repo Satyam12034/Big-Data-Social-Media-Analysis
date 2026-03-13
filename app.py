@@ -51,7 +51,7 @@ domain = st.sidebar.selectbox("Select Domain",
     ["All Sports News (Default)", "Global & India Pulse", "Bollywood Buzz", "Mental Health Analysis"])
 
 # --- DOMAIN LOGIC ---
-if domain == "All Sports News (Default)":
+if domain == "All Sports News":
     st.title("🏆 World Sports Intelligence")
     st.write("Live tracking of Football, Cricket, Tennis, F1, and more.")
     
@@ -95,7 +95,7 @@ elif domain == "Bollywood Buzz":
         st.plotly_chart(px.area(df, x="Headline", y="Confidence", color="Sentiment", title="Buzz Velocity"))
 
 elif domain == "Mental Health Analysis":
-    st.title("🧠 Post-COVID Mental Health Conversations")
+    st.title("🧠 Mental Health Conversations")
     url = "https://news.google.com/rss/search?q=Mental+Health+Awareness+Reddit+Twitter"
     
 if st.button("Monitor Wellness Trends"):
